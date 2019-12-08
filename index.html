@@ -101,7 +101,6 @@
                 'Ocp-Apim-Subscription-Key': '1c5d2191107f475fa7d6682e7ebb0608',
             }
         });
-        map.spin(true);
         function stringToColour(str) {
             var hash = 0;
             for (var i = 0; i < str.length; i++) {
@@ -115,37 +114,53 @@
             return colour;
         }
 
+        var markers = {}
+
+        map.spin(true);
         $.getJSON("https://api.at.govt.nz/v2/gtfs/routes", function (data) {
+            map.spin(false);
             console.log(data);
             var routes = {}
             for (var i in data.response) {
                 var r = data.response[i];
                 routes[r.route_id] = r
             }
-            $.getJSON("https://api.at.govt.nz/v2/public/realtime/vehiclelocations", function (data) {
-                map.spin(false);
-                console.log(data);
-                for (var i in data.response.entity) {
-                    var v = data.response.entity[i].vehicle;
-                    var desc = "<b>" + v.vehicle.label + "</b><br>";
-                    var color = "black";
-                    var layer = layers[null];
-                    if (v.trip) {
-                        var r = routes[v.trip.route_id];
-                        if (r) {
-                            desc += r.route_short_name + ":" + r.route_long_name;
-                            if (r.route_type == 4) {
-                                color = "blue";
-                            } else {
-                                color = stringToColour(r.route_short_name);
+            function loop() {
+                map.spin(true);
+                $.getJSON("https://api.at.govt.nz/v2/public/realtime/vehiclelocations", function (data) {
+                    map.spin(false);
+                    console.log(data);
+                    for (var i in data.response.entity) {
+                        var id = data.response.entity[i].id;
+                        var v = data.response.entity[i].vehicle;
+                        var desc = "<b>" + v.vehicle.label + "</b><br>";
+                        var color = "black";
+                        var layer = layers[null];
+                        if (v.trip) {
+                            var r = routes[v.trip.route_id];
+                            if (r) {
+                                desc += r.route_short_name + ":" + r.route_long_name;
+                                if (r.route_type == 4) {
+                                    color = "blue";
+                                } else {
+                                    color = stringToColour(r.route_short_name);
+                                }
+                                layer = layers[r.route_type];
                             }
-                            layer = layers[r.route_type];
                         }
+                        if (markers[id]) {
+                            var marker = markers[id];
+                            marker.setLatLng([v.position.latitude, v.position.longitude]);
+                        } else {
+                            var marker = L.circleMarker([v.position.latitude, v.position.longitude], { radius: 2, color: color }).addTo(layer);
+                            markers[id] = marker
+                        }
+                        marker.bindTooltip(desc + "<br>Speed: " + Math.round(v.position.speed) + "km/h<br>Occupancy: " + v.occupancy_status)
                     }
-                    var marker = L.circleMarker([v.position.latitude, v.position.longitude], { radius: 2, color: color }).addTo(layer);
-                    marker.bindTooltip(desc + "<br>Speed: " + Math.round(v.position.speed) + "km/h<br>Occupancy: " + v.occupancy_status)
-                }
-            })
+                })
+                setTimeout(loop, 10000);
+            }
+            loop();
         });
 
     </script>
