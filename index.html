@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>AT realtime map</title>
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css"
+        integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+        crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"
+        integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og=="
+        crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet-providers@1.3.0/leaflet-providers.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"
+        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/spin.js/2.3.2/spin.min.js"></script>
+    <script src="https://unpkg.com/leaflet-spin@1.1.0/leaflet.spin.min.js"></script>
+    <style>
+        body,
+        html,
+        #map {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #title {
+            position: absolute;
+            top: 10px;
+            left: 0;
+            right: 0;
+            margin: auto;
+            z-index: 1000;
+            width: 500px;
+            text-align: center;
+            color: white;
+            border-radius: 5px;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.8);
+            font-size: 1rem;
+            font-family: Arial, Helvetica, sans-serif;
+            text-shadow: 2px 2px #000000;
+            font-weight: normal;
+        }
+    </style>
+
+</head>
+
+<body>
+
+
+    <h1 id="title">AT realtime map</h1>
+    <div id="map"></div>
+    <script>
+
+        var map = L.map('map', {
+            center: [-36.8862, 174.7651],
+            zoom: 12,
+            worldCopyJump: true
+        });
+
+        var positron = L.tileLayer.provider('CartoDB.Positron').addTo(map);
+
+        var baseMaps = {
+            "OSM": L.tileLayer.provider("OpenStreetMap.Mapnik"),
+            "OSM Grayscale": L.tileLayer.provider("OpenStreetMap.BlackAndWhite"),
+            "CartoDB Positron": positron,
+            "CartoDB Dark Matter": L.tileLayer.provider("CartoDB.DarkMatter"),
+            "ESRI WorldImagery": L.tileLayer.provider("Esri.WorldImagery"),
+            "Google Hybrid": L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+            }),
+            "Wikimedia": L.tileLayer.provider("Wikimedia")
+        }
+
+        var layers = {
+            2: L.layerGroup().addTo(map),
+            3: L.layerGroup().addTo(map),
+            4: L.layerGroup().addTo(map),
+            null: L.layerGroup()
+        }
+
+        var overlayMaps = {
+            "Bus": layers[3],
+            "Train": layers[2],
+            "Ferry": layers[4],
+            "Off-route": layers[null]
+        }
+
+        L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+        $.ajaxSetup({
+            headers: {
+                'Ocp-Apim-Subscription-Key': '1c5d2191107f475fa7d6682e7ebb0608',
+            }
+        });
+        map.spin(true);
+        function stringToColour(str) {
+            var hash = 0;
+            for (var i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            var colour = '#';
+            for (var i = 0; i < 3; i++) {
+                var value = (hash >> (i * 8)) & 0xFF;
+                colour += ('00' + value.toString(16)).substr(-2);
+            }
+            return colour;
+        }
+
+        $.getJSON("https://api.at.govt.nz/v2/gtfs/routes", function (data) {
+            console.log(data);
+            var routes = {}
+            for (var i in data.response) {
+                var r = data.response[i];
+                routes[r.route_id] = r
+            }
+            $.getJSON("https://api.at.govt.nz/v2/public/realtime/vehiclelocations", function (data) {
+                map.spin(false);
+                console.log(data);
+                for (var i in data.response.entity) {
+                    var v = data.response.entity[i].vehicle;
+                    var desc = "<b>" + v.vehicle.label + "</b><br>";
+                    var color = "black";
+                    var layer = layers[null];
+                    if (v.trip) {
+                        var r = routes[v.trip.route_id];
+                        if (r) {
+                            desc += r.route_short_name + ":" + r.route_long_name;
+                            if (r.route_type == 4) {
+                                color = "blue";
+                            } else {
+                                color = stringToColour(r.route_short_name);
+                            }
+                            layer = layers[r.route_type];
+                        }
+                    }
+                    var marker = L.circleMarker([v.position.latitude, v.position.longitude], { radius: 2, color: color }).addTo(layer);
+                    marker.bindTooltip(desc + "<br>Speed: " + Math.round(v.position.speed) + "km/h<br>Occupancy: " + v.occupancy_status)
+                }
+            })
+        });
+
+    </script>
+
+
+
+</body>
+
+</html>
