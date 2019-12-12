@@ -127,6 +127,10 @@
                 routes[r.route_id] = r
             }
             function loop() {
+                if (!document.hasFocus()) {
+                    console.log("tab unfocused, skipping");
+                    return;
+                }
                 map.spin(true);
                 $.getJSON("https://api.at.govt.nz/v2/public/realtime/vehiclelocations", function (data) {
                     map.spin(false);
@@ -159,9 +163,9 @@
                         marker.bindTooltip(desc + "<br>Speed: " + Math.round(v.position.speed) + "km/h<br>Occupancy: " + occupancy[v.occupancy_status])
                     }
                 })
-                setTimeout(loop, 10000);
             }
             loop();
+            setInterval(loop, 10000);
         });
 
     </script>
