@@ -160,7 +160,7 @@
                             var marker = L.circleMarker([v.position.latitude, v.position.longitude], { radius: 2, color: color }).addTo(layer);
                             markers[id] = marker
                         }
-                        marker.bindTooltip(desc + "<br>Speed: " + Math.round(v.position.speed) + "km/h<br>Occupancy: " + occupancy[v.occupancy_status])
+                        marker.bindTooltip(desc + "<br>Speed: " + Math.round(v.position.speed * 3.6) + "km/h<br>Occupancy: " + occupancy[v.occupancy_status])
                     }
                 })
             }
