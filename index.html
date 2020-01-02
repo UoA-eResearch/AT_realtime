@@ -20,6 +20,8 @@
         integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/spin.js/2.3.2/spin.min.js"></script>
     <script src="https://unpkg.com/leaflet-spin@1.1.0/leaflet.spin.min.js"></script>
+    <script src="https://unpkg.com/leaflet-search@2.9.8/dist/leaflet-search.src.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-search@2.9.8/src/leaflet-search.css" />
     <style>
         body,
         html,
@@ -86,6 +88,26 @@
             4: L.layerGroup().addTo(map),
             null: L.layerGroup()
         }
+
+        var search = L.control.search({
+            layer: L.layerGroup([layers[2], layers[3], layers[4], layers[null]]),
+            initial: false,
+            propertyName: 'desc'
+        })
+        map.addControl(search)
+        map.removeLayer(layers[null])
+
+        $(".search-input").keyup(function() {
+            console.log(this.value);
+            for (var i in markers) {
+                var marker = markers[i];
+                if (!this.value || marker.options.desc.toLowerCase().includes(this.value.toLowerCase())) {
+                    marker.setStyle({opacity: 1});
+                } else {
+                    marker.setStyle({opacity: .1});
+                }
+            }
+        })
 
         var overlayMaps = {
             "Bus": layers[3],
@@ -157,7 +179,7 @@
                             var marker = markers[id];
                             marker.setLatLng([v.position.latitude, v.position.longitude]);
                         } else {
-                            var marker = L.circleMarker([v.position.latitude, v.position.longitude], { radius: 2, color: color }).addTo(layer);
+                            var marker = L.circleMarker([v.position.latitude, v.position.longitude], { radius: 2, color: color, desc: desc }).addTo(layer);
                             markers[id] = marker
                         }
                         marker.bindTooltip(desc + "<br>Speed: " + Math.round(v.position.speed * 3.6) + "km/h<br>Occupancy: " + occupancy[v.occupancy_status])
