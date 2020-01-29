@@ -93,7 +93,7 @@
             "Wikimedia": L.tileLayer.provider("Wikimedia")
         }
 
-        L.layerGroup([], {attribution: "© <a href='https://dev-portal.at.govt.nz/'>AT</a>"}).addTo(map)
+        map.attributionControl.addAttribution("© <a href='https://dev-portal.at.govt.nz/'>AT</a>");
 
         var layers = {
             2: L.layerGroup().addTo(map),
