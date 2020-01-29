@@ -93,6 +93,8 @@
             "Wikimedia": L.tileLayer.provider("Wikimedia")
         }
 
+        L.layerGroup([], {attribution: "© <a href='https://dev-portal.at.govt.nz/'>AT</a>"}).addTo(map)
+
         var layers = {
             2: L.layerGroup().addTo(map),
             3: L.layerGroup().addTo(map),
@@ -150,6 +152,8 @@
         var markers = {}
         var occupancy = ["empty", "many seats available", "few seats available", "standing room only", "limited standing room", "full", "not accepting passengers"]
 
+        var hasLoaded = false;
+
         map.spin(true);
         $.getJSON("https://api-proxy.auckland-cer.cloud.edu.au/AT/v2/gtfs/routes", function (data) {
             map.spin(false);
@@ -160,10 +164,11 @@
                 routes[r.route_id] = r
             }
             function loop() {
-                if (!document.hasFocus()) {
+                if (hasLoaded && !document.hasFocus()) {
                     console.log("tab unfocused, skipping");
                     return;
                 }
+                hasLoaded = true;
                 map.spin(true);
                 $.getJSON("https://api-proxy.auckland-cer.cloud.edu.au/AT/v2/public/realtime/vehiclelocations", function (data) {
                     map.spin(false);
