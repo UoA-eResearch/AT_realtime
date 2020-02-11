@@ -21,6 +21,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/spin.js/2.3.2/spin.min.js"></script>
     <script src="https://unpkg.com/leaflet-spin@1.1.0/leaflet.spin.min.js"></script>
     <script src="https://unpkg.com/leaflet-search@2.9.8/dist/leaflet-search.src.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.0.3/chroma.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-search@2.9.8/src/leaflet-search.css" />
     <style>
         body,
@@ -49,6 +50,13 @@
             font-family: Arial, Helvetica, sans-serif;
             text-shadow: 2px 2px #000000;
             font-weight: normal;
+        }
+        .info {
+            background-color: white;
+            padding: 15px;
+            color: black;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
         }
     </style>
 
@@ -131,6 +139,21 @@
 
         L.control.layers(baseMaps, overlayMaps).addTo(map);
 
+        var legend = L.control({position: 'bottomright'});
+        legend.onAdd = function (map) {
+            var div = L.DomUtil.create('div', 'info legend');
+            div.innerHTML = 'Colour by: <select id="colourscheme"><option>Route</option><option>Occupancy</option><option>Speed</select>';
+            return div;
+        };
+        legend.addTo(map);
+        $("#colourscheme").change(function() {
+            window.colourscheme = this.value;
+            for (var i in markers) {
+                updateMarkerColour(markers[i]);
+            }
+        });
+        window.colourscheme = "Route";
+
         $.ajaxSetup({
             headers: {
                 'Ocp-Apim-Subscription-Key': '763b2ff00d474b29bc64acd6811517bb',
@@ -149,8 +172,27 @@
             return colour;
         }
 
+        function updateMarkerColour(marker) {
+            var color = "black";
+            if (window.colourscheme == "Route") {
+                if (marker.route_type == 4) {
+                    color = "blue";
+                } else if (marker.route_long_name) {
+                    color = stringToColour(marker.route_long_name);
+                }
+            } else if (window.colourscheme == "Occupancy" && marker.occupancy_status != undefined) {
+                color = occupancyColors[marker.occupancy_status];
+            } else if (window.colourscheme == "Speed") {
+                color = speedColors(marker.speed);
+            }
+            marker.setStyle({color: color});
+        }
+
         var markers = {}
         var occupancy = ["empty", "many seats available", "few seats available", "standing room only", "limited standing room", "full", "not accepting passengers"]
+        var occupancyColors = ["#4575b4", "#91bfdb", "#e0f3f8", "#fee090", "#fc8d59", "#d73027", "black"]
+
+        var speedColors = chroma.scale([chroma.hsv(270,1,1), chroma.hsv(180,1,1), chroma.hsv(90,1,1), chroma.hsv(0,1,1)]).mode("hsv").domain([0, 100]);
 
         var hasLoaded = false;
 
@@ -177,28 +219,29 @@
                         var id = data.response.entity[i].id;
                         var v = data.response.entity[i].vehicle;
                         var desc = "<b>" + v.vehicle.label + "</b><br>";
-                        var color = "black";
                         var layer = layers[null];
-                        if (v.trip) {
-                            var r = routes[v.trip.route_id];
-                            if (r) {
-                                desc += r.route_short_name + ":" + r.route_long_name;
-                                if (r.route_type == 4) {
-                                    color = "blue";
-                                } else {
-                                    color = stringToColour(r.route_long_name);
-                                }
-                                layer = layers[r.route_type];
-                            }
-                        }
                         if (markers[id]) {
                             var marker = markers[id];
                             marker.setLatLng([v.position.latitude, v.position.longitude]);
                         } else {
-                            var marker = L.circleMarker([v.position.latitude, v.position.longitude], { radius: 2, color: color, desc: desc }).addTo(layer);
+                            var marker = L.circleMarker([v.position.latitude, v.position.longitude], { radius: 2, desc: desc });
                             markers[id] = marker
                         }
-                        marker.bindTooltip(desc + "<br>Speed: " + Math.round(v.position.speed * 3.6) + "km/h<br>Occupancy: " + occupancy[v.occupancy_status])
+                        if (v.trip) {
+                            var r = routes[v.trip.route_id];
+                            if (r) {
+                                desc += r.route_short_name + ":" + r.route_long_name;
+                                marker.options.desc = desc;
+                                marker.route_long_name = r.route_long_name;
+                                marker.route_type = r.route_type;
+                                layer = layers[r.route_type];
+                            }
+                        }
+                        marker.addTo(layer);
+                        marker.speed = Math.round(v.position.speed * 3.6)
+                        marker.bindTooltip(desc + "<br>Speed: " + marker.speed + "km/h<br>Occupancy: " + occupancy[v.occupancy_status])
+                        marker.occupancy_status = v.occupancy_status;
+                        updateMarkerColour(marker);
                     }
                 })
             }
