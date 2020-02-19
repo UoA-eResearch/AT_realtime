@@ -197,7 +197,7 @@
         var hasLoaded = false;
 
         map.spin(true);
-        $.getJSON("https://api-proxy.auckland-cer.cloud.edu.au/AT/v2/gtfs/routes", function (data) {
+        $.getJSON("https://api.at.govt.nz/v2/gtfs/routes", function (data) {
             map.spin(false);
             console.log(data);
             var routes = {}
@@ -212,7 +212,7 @@
                 }
                 hasLoaded = true;
                 map.spin(true);
-                $.getJSON("https://api-proxy.auckland-cer.cloud.edu.au/AT/v2/public/realtime/vehiclelocations", function (data) {
+                $.getJSON("https://api.at.govt.nz/v2/public/realtime/vehiclelocations", function (data) {
                     map.spin(false);
                     console.log(data);
                     for (var i in data.response.entity) {
