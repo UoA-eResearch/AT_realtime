@@ -148,11 +148,16 @@
         legend.addTo(map);
         $("#colourscheme").change(function() {
             window.colourscheme = this.value;
+            location.hash = this.value;
             for (var i in markers) {
                 updateMarkerColour(markers[i]);
             }
         });
         window.colourscheme = "Route";
+        if (location.hash) {
+            window.colourscheme = location.hash.slice(1);
+            $("#colourscheme").val(window.colourscheme)
+        }
 
         $.ajaxSetup({
             headers: {
