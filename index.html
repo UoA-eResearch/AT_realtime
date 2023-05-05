@@ -107,7 +107,7 @@
             2: L.layerGroup().addTo(map),
             3: L.layerGroup().addTo(map),
             4: L.layerGroup().addTo(map),
-            null: L.layerGroup()
+            null: L.layerGroup().addTo(map)
         }
 
         var search = L.control.search({
@@ -116,7 +116,7 @@
             propertyName: 'desc'
         })
         map.addControl(search)
-        map.removeLayer(layers[null])
+        //map.removeLayer(layers[null])
 
         $(".search-input").keyup(function() {
             console.log(this.value);
@@ -153,7 +153,7 @@
                 updateMarkerColour(markers[i]);
             }
         });
-        window.colourscheme = "Route";
+        window.colourscheme = "Occupancy";
         if (location.hash) {
             window.colourscheme = location.hash.slice(1);
             $("#colourscheme").val(window.colourscheme)
@@ -201,58 +201,62 @@
 
         var hasLoaded = false;
 
+        var routes = {}
+
         map.spin(true);
         $.getJSON("https://api-proxy.auckland-cer.cloud.edu.au/AT/v2/gtfs/routes", function (data) {
             map.spin(false);
             console.log(data);
-            var routes = {}
             for (var i in data.response) {
                 var r = data.response[i];
                 routes[r.route_id] = r
             }
-            function loop() {
-                if (hasLoaded && !document.hasFocus()) {
-                    console.log("tab unfocused, skipping");
-                    return;
-                }
-                hasLoaded = true;
-                map.spin(true);
-                $.getJSON("https://api-proxy.auckland-cer.cloud.edu.au/AT/v2/public/realtime/vehiclelocations", function (data) {
-                    map.spin(false);
-                    console.log(data);
-                    for (var i in data.response.entity) {
-                        var id = data.response.entity[i].id;
-                        var v = data.response.entity[i].vehicle;
-                        var desc = "<b>" + v.vehicle.label + "</b><br>";
-                        var layer = layers[null];
-                        if (markers[id]) {
-                            var marker = markers[id];
-                            marker.setLatLng([v.position.latitude, v.position.longitude]);
-                        } else {
-                            var marker = L.circleMarker([v.position.latitude, v.position.longitude], { radius: 2, desc: desc });
-                            markers[id] = marker
-                        }
-                        if (v.trip) {
-                            var r = routes[v.trip.route_id];
-                            if (r) {
-                                desc += r.route_short_name + ":" + r.route_long_name;
-                                marker.options.desc = desc;
-                                marker.route_long_name = r.route_long_name;
-                                marker.route_type = r.route_type;
-                                layer = layers[r.route_type];
-                            }
-                        }
-                        marker.addTo(layer);
-                        marker.speed = Math.round(v.position.speed * 3.6)
-                        marker.bindTooltip(desc + "<br>Speed: " + marker.speed + "km/h<br>Occupancy: " + occupancy[v.occupancy_status])
-                        marker.occupancy_status = v.occupancy_status;
-                        updateMarkerColour(marker);
-                    }
-                })
-            }
-            loop();
-            setInterval(loop, 10000);
+            loop()
         });
+
+        
+        function loop() {
+            if (hasLoaded && !document.hasFocus()) {
+                console.log("tab unfocused, skipping");
+                return;
+            }
+            hasLoaded = true;
+            //map.spin(true);
+            $.getJSON("https://api-proxy.auckland-cer.cloud.edu.au/AT/v2/public/realtime/vehiclelocations", function (data) {
+                map.spin(false);
+                console.log(data);
+                for (var i in data.response.entity) {
+                    var id = data.response.entity[i].id;
+                    var v = data.response.entity[i].vehicle;
+                    var desc = "<b>" + v.vehicle.label + "</b><br>";
+                    var layer = layers[null];
+                    if (markers[id]) {
+                        var marker = markers[id];
+                        marker.setLatLng([v.position.latitude, v.position.longitude]);
+                    } else {
+                        var marker = L.circleMarker([v.position.latitude, v.position.longitude], { radius: 2, desc: desc });
+                        markers[id] = marker
+                    }
+                    if (v.trip) {
+                        var r = routes[v.trip.route_id];
+                        if (r) {
+                            desc += r.route_short_name + ":" + r.route_long_name;
+                            marker.options.desc = desc;
+                            marker.route_long_name = r.route_long_name;
+                            marker.route_type = r.route_type;
+                            layer = layers[r.route_type];
+                        }
+                    }
+                    marker.addTo(layer);
+                    marker.speed = Math.round(v.position.speed * 3.6)
+                    marker.bindTooltip(desc + "<br>Speed: " + marker.speed + "km/h<br>Occupancy: " + occupancy[v.occupancy_status])
+                    marker.occupancy_status = v.occupancy_status;
+                    updateMarkerColour(marker);
+                }
+            })
+        }
+        loop();
+        setInterval(loop, 10000);
 
     </script>
 
