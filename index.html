@@ -51,11 +51,12 @@
             text-shadow: 2px 2px #000000;
             font-weight: normal;
         }
+
         .info {
             background-color: white;
             padding: 15px;
             color: black;
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
             border-radius: 5px;
         }
     </style>
@@ -64,7 +65,7 @@
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-77710107-12"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
+        function gtag() { dataLayer.push(arguments); }
         gtag('js', new Date());
 
         gtag('config', 'UA-77710107-12');
@@ -116,16 +117,16 @@
             propertyName: 'desc'
         })
         map.addControl(search)
-        //map.removeLayer(layers[null])
+        map.removeLayer(layers[null])
 
-        $(".search-input").keyup(function() {
+        $(".search-input").keyup(function () {
             console.log(this.value);
             for (var i in markers) {
                 var marker = markers[i];
                 if (!this.value || marker.options.desc.toLowerCase().includes(this.value.toLowerCase())) {
-                    marker.setStyle({opacity: 1, fillOpacity: .2});
+                    marker.setStyle({ opacity: 1, fillOpacity: .2 });
                 } else {
-                    marker.setStyle({opacity: 0, fillOpacity: 0});
+                    marker.setStyle({ opacity: 0, fillOpacity: 0 });
                 }
             }
         })
@@ -139,31 +140,26 @@
 
         L.control.layers(baseMaps, overlayMaps).addTo(map);
 
-        var legend = L.control({position: 'bottomright'});
+        var legend = L.control({ position: 'bottomright' });
         legend.onAdd = function (map) {
             var div = L.DomUtil.create('div', 'info legend');
             div.innerHTML = 'Colour by: <select id="colourscheme"><option>Route</option><option>Occupancy</option><option>Speed</select>';
             return div;
         };
         legend.addTo(map);
-        $("#colourscheme").change(function() {
+        $("#colourscheme").change(function () {
             window.colourscheme = this.value;
             location.hash = this.value;
             for (var i in markers) {
                 updateMarkerColour(markers[i]);
             }
         });
-        window.colourscheme = "Occupancy";
+        window.colourscheme = "Route";
         if (location.hash) {
             window.colourscheme = location.hash.slice(1);
             $("#colourscheme").val(window.colourscheme)
         }
 
-        $.ajaxSetup({
-            headers: {
-                'Ocp-Apim-Subscription-Key': '763b2ff00d474b29bc64acd6811517bb',
-            }
-        });
         function stringToColour(str) {
             var hash = 0;
             for (var i = 0; i < str.length; i++) {
@@ -190,31 +186,40 @@
             } else if (window.colourscheme == "Speed") {
                 color = speedColors(marker.speed);
             }
-            marker.setStyle({color: color});
+            marker.setStyle({ color: color });
         }
 
         var markers = {}
         var occupancy = ["empty", "many seats available", "few seats available", "standing room only", "limited standing room", "full", "not accepting passengers"]
         var occupancyColors = ["#4575b4", "#91bfdb", "#e0f3f8", "#fee090", "#fc8d59", "#d73027", "black"]
 
-        var speedColors = chroma.scale([chroma.hsv(270,1,1), chroma.hsv(180,1,1), chroma.hsv(90,1,1), chroma.hsv(0,1,1)]).mode("hsv").domain([0, 100]);
+        var speedColors = chroma.scale([chroma.hsv(270, 1, 1), chroma.hsv(180, 1, 1), chroma.hsv(90, 1, 1), chroma.hsv(0, 1, 1)]).mode("hsv").domain([0, 100]);
 
         var hasLoaded = false;
 
         var routes = {}
 
         map.spin(true);
-        $.getJSON("https://api-proxy.auckland-cer.cloud.edu.au/AT/v2/gtfs/routes", function (data) {
-            map.spin(false);
-            console.log(data);
-            for (var i in data.response) {
-                var r = data.response[i];
-                routes[r.route_id] = r
+        fetch('https://api-proxy.auckland-cer.cloud.edu.au/AT/gtfs/v3/routes', {
+            method: 'GET',
+            // Request headers
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Ocp-Apim-Subscription-Key': '7ddfd9ea87aa41dc9fe4efb9a5318dd5',
             }
-            loop()
-        });
+        })
+            .then(response => response.json())
+            .then(response => {
+                map.spin(false);
+                console.log(response);
+                for (var r of response.data) {
+                    routes[r.id] = r.attributes
+                }
+                loop()
+            })
+            .catch(err => console.error(err));
 
-        
+
         function loop() {
             if (hasLoaded && !document.hasFocus()) {
                 console.log("tab unfocused, skipping");
@@ -222,40 +227,57 @@
             }
             hasLoaded = true;
             //map.spin(true);
-            $.getJSON("https://api-proxy.auckland-cer.cloud.edu.au/AT/v2/public/realtime/vehiclelocations", function (data) {
-                map.spin(false);
-                console.log(data);
-                for (var i in data.response.entity) {
-                    var id = data.response.entity[i].id;
-                    var v = data.response.entity[i].vehicle;
-                    var desc = "<b>" + v.vehicle.label + "</b><br>";
-                    var layer = layers[null];
-                    if (markers[id]) {
-                        var marker = markers[id];
-                        marker.setLatLng([v.position.latitude, v.position.longitude]);
-                    } else {
-                        var marker = L.circleMarker([v.position.latitude, v.position.longitude], { radius: 2, desc: desc });
-                        markers[id] = marker
-                    }
-                    if (v.trip) {
-                        var r = routes[v.trip.route_id];
-                        if (r) {
-                            desc += r.route_short_name + ":" + r.route_long_name;
-                            marker.options.desc = desc;
-                            marker.route_long_name = r.route_long_name;
-                            marker.route_type = r.route_type;
-                            layer = layers[r.route_type];
-                        }
-                    }
-                    marker.addTo(layer);
-                    marker.speed = Math.round(v.position.speed * 3.6)
-                    marker.bindTooltip(desc + "<br>Speed: " + marker.speed + "km/h<br>Occupancy: " + occupancy[v.occupancy_status])
-                    marker.occupancy_status = v.occupancy_status;
-                    updateMarkerColour(marker);
+            fetch('https://api-proxy.auckland-cer.cloud.edu.au/AT/realtime/legacy/vehiclelocations', {
+                method: 'GET',
+                // Request headers
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Ocp-Apim-Subscription-Key': '763b2ff00d474b29bc64acd6811517bb',
                 }
             })
+                .then(response => response.json())
+                .then(data => {
+                    map.spin(false);
+                    console.log(data);
+                    for (var i in data.response.entity) {
+                        var id = data.response.entity[i].id;
+                        var v = data.response.entity[i].vehicle;
+                        var desc = "<b>" + v.vehicle.label + "</b><br>";
+                        var layer = layers[null];
+                        if (markers[id]) {
+                            var marker = markers[id];
+                            marker.setLatLng([v.position.latitude, v.position.longitude]);
+                        } else {
+                            var marker = L.circleMarker([v.position.latitude, v.position.longitude], { radius: 2, desc: desc });
+                            markers[id] = marker
+                        }
+                        if (v.trip) {
+                            var r = routes[v.trip.route_id];
+                            if (r) {
+                                desc += r.agency_id + ": " + r.route_long_name;
+                                marker.options.desc = desc;
+                                marker.route_long_name = r.route_long_name;
+                                marker.route_type = r.route_type;
+                                layer = layers[r.route_type];
+                                if (!layer) {
+                                    console.error(r)
+                                    layer = layers[null]
+                                }
+                            } else {
+                                console.error(v)
+                            }
+                        }
+                        marker.addTo(layer);
+                        // Convert m/s to km/h
+                        marker.speed = Math.round(v.position.speed * 3.6)
+                        marker.bindTooltip(desc + "<br>Speed: " + marker.speed + "km/h<br>Occupancy: " + occupancy[v.occupancy_status])
+                        marker.occupancy_status = v.occupancy_status;
+                        updateMarkerColour(marker);
+                    }
+                })
+                .catch(err => console.error(err));
         }
-        loop();
+        //loop();
         setInterval(loop, 10000);
 
     </script>
