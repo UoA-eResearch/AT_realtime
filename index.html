@@ -242,7 +242,7 @@
                     for (var i in data.response.entity) {
                         var id = data.response.entity[i].id;
                         var v = data.response.entity[i].vehicle;
-                        var desc = "<b>" + v.vehicle.label + "</b><br>";
+                        var desc = `<b>${v.vehicle.label}</b><br>`;
                         var layer = layers[null];
                         if (markers[id]) {
                             var marker = markers[id];
@@ -254,7 +254,8 @@
                         if (v.trip) {
                             var r = routes[v.trip.route_id];
                             if (r) {
-                                desc += r.agency_id + ": " + r.route_long_name;
+                                desc += `Agency: ${r.agency_id}<br>
+                                Route: ${r.route_long_name}`
                                 marker.options.desc = desc;
                                 marker.route_long_name = r.route_long_name;
                                 marker.route_type = r.route_type;
@@ -270,7 +271,11 @@
                         marker.addTo(layer);
                         // Convert m/s to km/h
                         marker.speed = Math.round(v.position.speed * 3.6)
-                        marker.bindTooltip(desc + "<br>Speed: " + marker.speed + "km/h<br>Occupancy: " + occupancy[v.occupancy_status])
+                        marker.bindTooltip(`${desc}<br>
+                            Speed: ${marker.speed} km/h<br>
+                            Occupancy: ${occupancy[v.occupancy_status]}<br>
+                            License plate: ${v.vehicle.license_plate}
+                        `)
                         marker.occupancy_status = v.occupancy_status;
                         updateMarkerColour(marker);
                     }
