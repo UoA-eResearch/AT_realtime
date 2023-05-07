@@ -253,9 +253,11 @@
                         }
                         if (v.trip) {
                             var r = routes[v.trip.route_id];
+                            marker.trip = v.trip
                             if (r) {
                                 desc += `Agency: ${r.agency_id}<br>
-                                Route: ${r.route_long_name}`
+                                Route: ${r.route_long_name}<br>
+                                Headsign: <div id="headsign"></div>`
                                 marker.options.desc = desc;
                                 marker.route_long_name = r.route_long_name;
                                 marker.route_type = r.route_type;
@@ -269,14 +271,32 @@
                             }
                         }
                         marker.addTo(layer);
-                        marker.speed = v.position.speed
+                        marker.speed = Math.round(v.position.speed)
                         // Convert m/s to km/h
                         //marker.speed = Math.round(v.position.speed * 3.6)
-                        marker.bindTooltip(`${desc}<br>
+                        marker.bindTooltip(`${desc}
                             Speed: ${marker.speed} km/h<br>
                             Occupancy: ${occupancy[v.occupancy_status]}<br>
                             License plate: ${v.vehicle.license_plate}
                         `)
+                        marker.on("tooltipopen", function(e) {
+                            console.log(e)
+                            if (e.target.trip) {
+                                fetch('https://api.at.govt.nz/gtfs/v3/trips/' + e.target.trip.trip_id, {
+                                    method: 'GET',
+                                    // Request headers
+                                    headers: {
+                                        'Cache-Control': 'no-cache',
+                                        'Ocp-Apim-Subscription-Key': '7ddfd9ea87aa41dc9fe4efb9a5318dd5',}
+                                })
+                                .then(response => response.json())
+                                .then(response => {
+                                    console.log(response);
+                                    $("#headsign").text(response.data.attributes.trip_headsign)
+                                })
+                                .catch(err => console.error(err));
+                            }
+                        })
                         marker.occupancy_status = v.occupancy_status;
                         updateMarkerColour(marker);
                     }
