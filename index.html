@@ -269,8 +269,9 @@
                             }
                         }
                         marker.addTo(layer);
+                        marker.speed = v.position.speed
                         // Convert m/s to km/h
-                        marker.speed = Math.round(v.position.speed * 3.6)
+                        //marker.speed = Math.round(v.position.speed * 3.6)
                         marker.bindTooltip(`${desc}<br>
                             Speed: ${marker.speed} km/h<br>
                             Occupancy: ${occupancy[v.occupancy_status]}<br>
