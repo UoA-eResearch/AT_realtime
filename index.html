@@ -282,7 +282,7 @@
                         marker.on("tooltipopen", function(e) {
                             console.log(e)
                             if (e.target.trip) {
-                                fetch('https://api.at.govt.nz/gtfs/v3/trips/' + e.target.trip.trip_id, {
+                                fetch('https://api-proxy.auckland-cer.cloud.edu.au/AT/gtfs/v3/trips/' + e.target.trip.trip_id, {
                                     method: 'GET',
                                     // Request headers
                                     headers: {
