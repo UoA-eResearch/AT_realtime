@@ -248,7 +248,7 @@
                             var marker = markers[id];
                             marker.setLatLng([v.position.latitude, v.position.longitude]);
                         } else {
-                            var marker = L.circleMarker([v.position.latitude, v.position.longitude], { radius: 2, desc: desc });
+                            var marker = L.circle([v.position.latitude, v.position.longitude], { radius: 20, desc: desc });
                             markers[id] = marker
                         }
                         if (v.trip) {
