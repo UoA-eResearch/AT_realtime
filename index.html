@@ -255,6 +255,29 @@
                         } else {
                             var marker = L.circle([v.position.latitude, v.position.longitude], { radius: 20, desc: desc });
                             markers[id] = marker
+                            marker.on("tooltipopen", function(e) {
+                                //console.log(e)
+                                if (e.target.trip) {
+                                    fetch('https://api-proxy.auckland-cer.cloud.edu.au/AT/gtfs/v3/trips/' + e.target.trip.trip_id, {
+                                        method: 'GET',
+                                        // Request headers
+                                        headers: {
+                                            'Cache-Control': 'no-cache',
+                                            'Ocp-Apim-Subscription-Key': '7ddfd9ea87aa41dc9fe4efb9a5318dd5',}
+                                    })
+                                    .then(response => response.json())
+                                    .then(response => {
+                                        if (response.message) {
+                                            console.error(response.message)
+                                            $("#status").text(`Error getting trip: ${response.message}`)
+                                        } else {
+                                            console.log(response);
+                                            $("#headsign").text(response.data.attributes.trip_headsign)
+                                        }
+                                    })
+                                    .catch(err => console.error(err));
+                                }
+                            })
                         }
                         if (v.trip) {
                             var r = routes[v.trip.route_id];
@@ -285,29 +308,6 @@
                             Occupancy: ${occupancy[v.occupancy_status]}<br>
                             License plate: ${v.vehicle.license_plate}
                         `)
-                        marker.on("tooltipopen", function(e) {
-                            //console.log(e)
-                            if (e.target.trip) {
-                                fetch('https://api-proxy.auckland-cer.cloud.edu.au/AT/gtfs/v3/trips/' + e.target.trip.trip_id, {
-                                    method: 'GET',
-                                    // Request headers
-                                    headers: {
-                                        'Cache-Control': 'no-cache',
-                                        'Ocp-Apim-Subscription-Key': '7ddfd9ea87aa41dc9fe4efb9a5318dd5',}
-                                })
-                                .then(response => response.json())
-                                .then(response => {
-                                    if (response.message) {
-                                        console.error(response.message)
-                                        $("#status").text(`Error getting trip: ${response.message}`)
-                                    } else {
-                                        console.log(response);
-                                        $("#headsign").text(response.data.attributes.trip_headsign)
-                                    }
-                                })
-                                .catch(err => console.error(err));
-                            }
-                        })
                         marker.occupancy_status = v.occupancy_status;
                         updateMarkerColour(marker);
                     }
