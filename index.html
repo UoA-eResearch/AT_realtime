@@ -117,7 +117,7 @@
             propertyName: 'desc'
         })
         map.addControl(search)
-        map.removeLayer(layers[null])
+        //map.removeLayer(layers[null])
 
         $(".search-input").keyup(function () {
             console.log(this.value);
@@ -143,7 +143,7 @@
         var legend = L.control({ position: 'bottomright' });
         legend.onAdd = function (map) {
             var div = L.DomUtil.create('div', 'info legend');
-            div.innerHTML = 'Colour by: <select id="colourscheme"><option>Route</option><option>Occupancy</option><option>Speed</select>';
+            div.innerHTML = 'Colour by: <select id="colourscheme"><option>Route</option><option>Occupancy</option><option>Speed</select><div id="status"></div>';
             return div;
         };
         legend.addTo(map);
@@ -211,13 +211,17 @@
             .then(response => response.json())
             .then(response => {
                 map.spin(false);
-                console.log(response);
-                for (var r of response.data) {
-                    routes[r.id] = r.attributes
+                if (response.message) {
+                    console.error(response)
+                    $("#status").text(`Error getting routes: ${response.message}`)
+                } else {
+                    console.log(response);
+                    for (var r of response.data) {
+                        routes[r.id] = r.attributes
+                    }
                 }
                 loop()
             })
-            .catch(err => console.error(err));
 
 
         function loop() {
@@ -267,7 +271,8 @@
                                     layer = layers[null]
                                 }
                             } else {
-                                console.error(v)
+                                //console.error(v)
+                                layer = layers[null]
                             }
                         }
                         marker.addTo(layer);
@@ -280,7 +285,7 @@
                             License plate: ${v.vehicle.license_plate}
                         `)
                         marker.on("tooltipopen", function(e) {
-                            console.log(e)
+                            //console.log(e)
                             if (e.target.trip) {
                                 fetch('https://api-proxy.auckland-cer.cloud.edu.au/AT/gtfs/v3/trips/' + e.target.trip.trip_id, {
                                     method: 'GET',
@@ -291,8 +296,13 @@
                                 })
                                 .then(response => response.json())
                                 .then(response => {
-                                    console.log(response);
-                                    $("#headsign").text(response.data.attributes.trip_headsign)
+                                    if (response.message) {
+                                        console.error(response.message)
+                                        $("#status").text(`Error getting trip: ${response.message}`)
+                                    } else {
+                                        console.log(response);
+                                        $("#headsign").text(response.data.attributes.trip_headsign)
+                                    }
                                 })
                                 .catch(err => console.error(err));
                             }
