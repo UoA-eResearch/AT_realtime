@@ -200,12 +200,13 @@
         var routes = {}
 
         map.spin(true);
-        fetch('https://api-proxy.auckland-cer.cloud.edu.au/AT/gtfs/v3/routes', {
+        const API_KEY = '7ddfd9ea87aa41dc9fe4efb9a5318dd5'; // Please don't run out my quota. This key is only good for 600 calls/minute up to a maximum of 35000 calls/week. Map will break if quota exceeded.
+        fetch('https://api.at.govt.nz/gtfs/v3/routes', {
             method: 'GET',
             // Request headers
             headers: {
                 'Cache-Control': 'no-cache',
-                'Ocp-Apim-Subscription-Key': '7ddfd9ea87aa41dc9fe4efb9a5318dd5',
+                'Ocp-Apim-Subscription-Key': API_KEY,
             }
         })
             .then(response => response.json())
@@ -232,12 +233,12 @@
             }
             hasLoaded = true;
             //map.spin(true);
-            fetch('https://api-proxy.auckland-cer.cloud.edu.au/AT/realtime/legacy/vehiclelocations', {
+            fetch('https://api.at.govt.nz/realtime/legacy/vehiclelocations', {
                 method: 'GET',
                 // Request headers
                 headers: {
                     'Cache-Control': 'no-cache',
-                    'Ocp-Apim-Subscription-Key': '763b2ff00d474b29bc64acd6811517bb',
+                    'Ocp-Apim-Subscription-Key': API_KEY,
                 }
             })
                 .then(response => response.json())
@@ -255,27 +256,28 @@
                         } else {
                             var marker = L.circle([v.position.latitude, v.position.longitude], { radius: 20, desc: desc });
                             markers[id] = marker
-                            marker.on("tooltipopen", function(e) {
+                            marker.on("tooltipopen", function (e) {
                                 //console.log(e)
                                 if (e.target.trip) {
-                                    fetch('https://api-proxy.auckland-cer.cloud.edu.au/AT/gtfs/v3/trips/' + e.target.trip.trip_id, {
+                                    fetch('https://api.at.govt.nz/gtfs/v3/trips/' + e.target.trip.trip_id, {
                                         method: 'GET',
                                         // Request headers
                                         headers: {
                                             'Cache-Control': 'no-cache',
-                                            'Ocp-Apim-Subscription-Key': '7ddfd9ea87aa41dc9fe4efb9a5318dd5',}
-                                    })
-                                    .then(response => response.json())
-                                    .then(response => {
-                                        if (response.message) {
-                                            console.error(response.message)
-                                            $("#status").text(`Error getting trip: ${response.message}`)
-                                        } else {
-                                            console.log(response);
-                                            $("#headsign").text(response.data.attributes.trip_headsign)
+                                            'Ocp-Apim-Subscription-Key': API_KEY,
                                         }
-                                    })
-                                    .catch(err => console.error(err));
+                                        })
+                                        .then(response => response.json())
+                                        .then(response => {
+                                            if (response.message) {
+                                                console.error(response.message)
+                                                $("#status").text(`Error getting trip: ${response.message}`)
+                                            } else {
+                                                console.log(response);
+                                                $("#headsign").text(response.data.attributes.trip_headsign)
+                                            }
+                                        })
+                                        .catch(err => console.error(err));
                                 }
                             })
                         }
